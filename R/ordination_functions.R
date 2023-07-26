@@ -10,6 +10,19 @@ compute_distance_matrix <- function(data_matrix, distance_func) {
   return(distance_matrix)
 }
 
+compute_matching_distance <- function(data_matrix) {
+  num_rows <- nrow(data_matrix)
+  distance_matrix <- matrix(0, nrow = num_rows, ncol = num_rows)
+  
+  for (i in 1:num_rows) {
+    for (j in 1:num_rows) {
+      matches <- sum(data_matrix[i, ] == data_matrix[j, ])
+      distance_matrix[i, j] <- matches / ncol(data_matrix)
+    }
+  }
+  distance_matrix <- round(distance_matrix, digits = 2)
+  distance_matrix
+}
 
 ### Gower Similarity/Distance
 
@@ -96,3 +109,50 @@ compute_ordination <- function(data_matrix) {
   return(decomposition)
 }
 
+
+# Binarize matrix
+transform_matrix <- function(data_matrix) {
+  result_matrix <- data_matrix
+  last_col <- ncol(data_matrix)
+  
+  for (col in 1:(last_col - 1)) {
+    result_matrix[, col] <- ifelse(data_matrix[, col] %in% c(0, 1), 0,
+                                   ifelse(data_matrix[, col] %in% c(2, 3), 1, data_matrix[, col]))
+  }
+  
+  return(result_matrix)
+}
+
+
+order_similarity_pairs <- function(similarity_matrix) {
+  # Get the number of rows and columns in the similarity matrix
+  num_rows <- nrow(similarity_matrix)
+  num_cols <- ncol(similarity_matrix)
+  
+  # Compute the indices of the upper triangle elements of the similarity matrix
+  upper_triangle_indices <- upper.tri(similarity_matrix)
+  
+  # Generate a sequence of row and column indices for the upper triangle elements
+  row_indices <- row(similarity_matrix)[upper_triangle_indices]
+  col_indices <- col(similarity_matrix)[upper_triangle_indices]
+  
+  # Combine the row and column indices to create unique pairs
+  pairs <- paste(row_indices, col_indices)
+  
+  # Get the corresponding similarity values
+  similarity_values <- similarity_matrix[upper_triangle_indices]
+  
+  # Create a data frame with the unique pairs and their similarity values
+  ordered_pairs_df <- data.frame(Pair = pairs, Similarity = similarity_values)
+  
+  # Split the 'Pair' column into two columns
+  split_pairs <- strsplit(ordered_pairs_df$Pair, " ")
+  ordered_pairs_df <- data.frame(Object1 = sapply(split_pairs, `[`, 1),
+                                 Object2 = sapply(split_pairs, `[`, 2),
+                                 Similarity = ordered_pairs_df$Similarity)
+  
+  # Sort the data frame by similarity in descending order
+  ordered_pairs_df <- ordered_pairs_df[order(-ordered_pairs_df$Similarity), ]
+  
+  return(ordered_pairs_df)
+}
